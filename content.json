@@ -1,0 +1,52 @@
+{
+  "channelUrl": "",
+  "games": {
+    "signal": {
+      "web": "https://ryansacr7-dot.github.io/Signal-Run/",
+      "appStore": ""
+    },
+    "box": {
+      "web": "https://ryansacr7-dot.github.io/box-smash/",
+      "appStore": ""
+    }
+  },
+  "upcoming": [
+    {
+      "id": "box-smash-launch",
+      "kind": "STORE LAUNCH",
+      "title": "Box Smash on the App Store",
+      "date": null,
+      "color": "#FB923C"
+    },
+    {
+      "id": "signal-run-update",
+      "kind": "UPDATE",
+      "title": "Next Signal Run update",
+      "date": null,
+      "color": "#FACC15"
+    },
+    {
+      "id": "game-3",
+      "kind": "NEW GAME",
+      "title": "Game #3 (top secret)",
+      "date": null,
+      "color": "#A78BFA"
+    }
+  ],
+  "peeks": [
+    {
+      "id": "welcome",
+      "tag": "NEWS",
+      "title": "Welcome to Ryonic",
+      "body": "This is the home of every Ryonic Inc. game. Play from here, finish quests for RP, collect cosmetics, and pre-register for what's coming next. Made by one dev.",
+      "image": ""
+    },
+    {
+      "id": "box-smash-peek",
+      "tag": "SNEAK PEEK",
+      "title": "Box Smash is loading...",
+      "body": "A 3D physics puzzler: aim the cannon, smash the boxes, clear the level. More soon.",
+      "image": ""
+    }
+  ]
+}
