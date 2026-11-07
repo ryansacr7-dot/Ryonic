@@ -40,7 +40,7 @@ jobs:
         run: |
           set -e
           npm init -y
-          npm install @capacitor/core@5 @capacitor/cli@5 @capacitor/ios@5
+          npm install @capacitor/core@5 @capacitor/cli@5 @capacitor/ios@5 @capacitor/app@5
           if [ ! -f capacitor.config.json ] && [ ! -f capacitor.config.ts ]; then
             npx cap init "Ryonic" "com.ryan.ryonic" --web-dir=www
           fi
@@ -119,6 +119,13 @@ jobs:
             /usr/libexec/PlistBuddy -c "Add :$KEY array" "$PLIST"
             /usr/libexec/PlistBuddy -c "Add :$KEY:0 string UIInterfaceOrientationPortrait" "$PLIST"
           done
+          # ryonic:// links: the games' "Sync to Ryonic" button opens Ryonic with the player's progress
+          /usr/libexec/PlistBuddy -c "Delete :CFBundleURLTypes" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes array" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0 dict" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLName string com.ryan.ryonic" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes array" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string ryonic" "$PLIST"
           echo "Build number: ${{ github.run_number }}"
 
       - name: Write App Store Connect API Key
