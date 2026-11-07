@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0B0C0F">
+<title>Ryonic Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Unbounded:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0B0C0F;--card:#16171C;--card2:#1D1F26;--line:#2A2C33;--text:#F2F2EF;--muted:#A6A8AE;--cyan:#22D3EE;--gold:#FACC15;--lime:#A3E635;--pink:#FF5FA2;--red:#F43F5E;
+  --display:'Unbounded','Arial Black',sans-serif;--body:'Space Grotesk',system-ui,sans-serif}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--body)}
+.wrap{max-width:760px;margin:0 auto;padding:calc(18px + env(safe-area-inset-top)) 16px 120px;display:flex;flex-direction:column;gap:18px}
+header{display:flex;align-items:center;gap:12px}
+header b{font-family:var(--display);font-size:20px}
+.pill{font-size:11px;font-weight:700;letter-spacing:.1em;padding:4px 9px;border-radius:999px;background:var(--gold);color:#0B0C0F}
+h2{font-family:var(--display);font-size:18px;margin:8px 0 0}
+.sub{color:var(--muted);font-size:14px;line-height:1.5;margin:0}
+.card{background:var(--card);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.grow{flex:1;min-width:160px}
+label{font-size:12px;font-weight:700;color:var(--muted);display:flex;flex-direction:column;gap:6px;flex:1;min-width:150px}
+input,textarea,select{font-family:var(--body);font-size:16px;color:var(--text);background:var(--bg);border:2px solid var(--line);border-radius:12px;padding:11px 12px;outline:none;width:100%}
+textarea{min-height:90px;resize:vertical;line-height:1.45}
+input:focus,textarea:focus,select:focus{border-color:var(--cyan)}
+.btn{height:44px;border-radius:12px;border:0;background:var(--cyan);color:#0B0C0F;font-family:var(--body);font-weight:700;font-size:15px;padding:0 16px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn.ghost{background:transparent;color:var(--cyan);border:2px solid var(--cyan)}
+.btn.gold{background:var(--gold)}
+.btn.red{background:transparent;color:var(--red);border:2px solid var(--red)}
+.btn.icon{width:44px;padding:0;background:var(--card2);color:var(--text)}
+.btn:disabled{opacity:.35;cursor:default}
+.thumb{width:100%;max-height:200px;object-fit:cover;border-radius:12px;display:block}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.1em}
+.steps{margin:0;padding-left:20px;color:#D8D9DC;font-size:14px;line-height:1.7}
+.bar{position:fixed;left:0;right:0;bottom:0;background:rgba(17,18,22,.96);backdrop-filter:blur(10px);border-top:1px solid var(--line);padding:12px 16px calc(12px + env(safe-area-inset-bottom));display:flex;justify-content:center;gap:10px;z-index:5}
+.bar .btn{height:50px;font-size:16px;flex:1;max-width:360px}
+.toast{position:fixed;left:50%;top:20px;transform:translateX(-50%);background:var(--card2);border:1.5px solid var(--gold);padding:12px 18px;border-radius:14px;font-weight:700;z-index:30}
+.status{font-size:13px;color:var(--muted)}
+.dirty{color:var(--gold)}
+</style>
+</head>
+<body>
+<div class="wrap" id="root"></div>
+<div class="bar">
+  <button class="btn ghost" data-a="openFile">Open file</button>
+  <button class="btn gold" data-a="download">Download content.json</button>
+</div>
+<input type="file" id="fileIn" accept=".json,application/json" hidden>
+<input type="file" id="imgIn" accept="image/*" hidden>
+
+<script>
+/* Ryonic Studio: Ryan's dev tool.
+   It edits content.json for the Ryonic app. Nothing here changes the live app
+   until you upload the downloaded content.json to the Ryonic repo on GitHub,
+   so it is safe even if someone else finds this page. */
+const TAGS = ["SNEAK PEEK", "NEWS", "UPDATE", "EVENT"];
+const TAG_COLOR = { "NEWS": "#22D3EE", "SNEAK PEEK": "#FACC15", "UPDATE": "#A3E635", "EVENT": "#FF5FA2" };
+const KINDS = ["STORE LAUNCH", "UPDATE", "NEW GAME", "NEW APP", "EVENT"];
+const COLORS = ["#22D3EE", "#FACC15", "#FB923C", "#A78BFA", "#A3E635", "#FF5FA2"];
+const GAME_NAMES = { signal: "Signal Run", box: "Box Smash" };
+const DEFAULT_GAMES = {
+  signal: { web: "https://ryansacr7-dot.github.io/Signal-Run/", appStore: "" },
+  box: { web: "https://ryansacr7-dot.github.io/box-smash/", appStore: "" }
+};
+const DEFAULT = {
+  channelUrl: "",
+  games: JSON.parse(JSON.stringify(DEFAULT_GAMES)),
+  upcoming: [
+    { id: "box-smash-launch", kind: "STORE LAUNCH", title: "Box Smash on the App Store", date: null, color: "#FB923C" },
+    { id: "signal-run-update", kind: "UPDATE", title: "Next Signal Run update", date: null, color: "#FACC15" },
+    { id: "game-3", kind: "NEW GAME", title: "Game #3 (top secret)", date: null, color: "#A78BFA" }
+  ],
+  peeks: [
+    { id: "welcome", tag: "NEWS", title: "Welcome to Ryonic", body: "This is the home of every Ryonic Inc. game. Play from here, finish quests for RP, collect cosmetics, and pre-register for what's coming next. Made by one dev.", image: "" },
+    { id: "box-smash-peek", tag: "SNEAK PEEK", title: "Box Smash is loading...", body: "A 3D physics puzzler: aim the cannon, smash the boxes, clear the level. More soon.", image: "" }
+  ]
+};
+const DRAFT_KEY = "ryonic:studio:draft";
+let C = JSON.parse(JSON.stringify(DEFAULT));
+let dirty = false, imgTarget = null, source = "built-in defaults";
+
+const esc = (t) => String(t == null ? "" : t).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const newId = (p) => p + "-" + Date.now().toString(36);
+function toast(m) { document.querySelectorAll(".toast").forEach(t => t.remove()); const t = document.createElement("div"); t.className = "toast"; t.textContent = m; document.body.appendChild(t); setTimeout(() => t.remove(), 2400); }
+function touch() { dirty = true; try { localStorage.setItem(DRAFT_KEY, JSON.stringify(C)); } catch (e) { toast("Draft too big to auto-save. Download it now."); } }
+function normalize(c) {
+  const games = JSON.parse(JSON.stringify(DEFAULT_GAMES));
+  if (c.games && typeof c.games === "object") for (const id in games) Object.assign(games[id], c.games[id] || {});
+  return {
+    channelUrl: typeof c.channelUrl === "string" ? c.channelUrl : "",
+    games,
+    upcoming: Array.isArray(c.upcoming) ? c.upcoming : [],
+    peeks: Array.isArray(c.peeks) ? c.peeks : []
+  };
+}
+
+/* ---------- views ---------- */
+function peekCard(p, i) {
+  const n = C.peeks.length;
+  return `<div class="card">
+    <div class="row">
+      <span class="eyebrow grow" style="color:${TAG_COLOR[p.tag] || "#FACC15"}">${esc(p.tag)}${i === 0 ? " · SHOWS FIRST" : ""}</span>
+      <button class="btn icon" data-a="pUp" data-i="${i}" ${i === 0 ? "disabled" : ""} aria-label="Move up">↑</button>
+      <button class="btn icon" data-a="pDown" data-i="${i}" ${i === n - 1 ? "disabled" : ""} aria-label="Move down">↓</button>
+      <button class="btn icon" data-a="pDel" data-i="${i}" aria-label="Delete" style="color:var(--red)">✕</button>
+    </div>
+    <div class="row">
+      <label>Type<select data-f="peeks.${i}.tag">${TAGS.map(t => `<option ${t === p.tag ? "selected" : ""}>${t}</option>`).join("")}</select></label>
+      <label style="flex:3">Title<input data-f="peeks.${i}.title" maxlength="60" value="${esc(p.title)}"></label>
+    </div>
+    <label>Text<textarea data-f="peeks.${i}.body" maxlength="600">${esc(p.body)}</textarea></label>
+    ${p.image ? `<img class="thumb" src="${esc(p.image)}" alt="">` : ""}
+    <div class="row">
+      <button class="btn ghost" data-a="pImg" data-i="${i}">${p.image ? "Change picture" : "Add picture"}</button>
+      ${p.image ? `<button class="btn red" data-a="pImgDel" data-i="${i}">Remove picture</button>` : ""}
+    </div>
+  </div>`;
+}
+function upCard(u, i) {
+  return `<div class="card">
+    <div class="row">
+      <span class="eyebrow grow" style="color:${esc(u.color)}">${esc(u.kind)}</span>
+      <button class="btn icon" data-a="uDel" data-i="${i}" aria-label="Delete" style="color:var(--red)">✕</button>
+    </div>
+    <label>Title<input data-f="upcoming.${i}.title" maxlength="60" value="${esc(u.title)}"></label>
+    <div class="row">
+      <label>Type<select data-f="upcoming.${i}.kind">${KINDS.map(k => `<option ${k === u.kind ? "selected" : ""}>${k}</option>`).join("")}</select></label>
+      <label>Release date (leave empty for TBA)<input type="date" data-f="upcoming.${i}.date" value="${esc(u.date || "")}"></label>
+    </div>
+    <div class="row">${COLORS.map(c => `<button class="btn icon" data-a="uColor" data-i="${i}" data-c="${c}" aria-label="Color ${c}" style="background:${c};outline:${u.color === c ? "3px solid #fff" : "none"};outline-offset:2px"></button>`).join("")}</div>
+  </div>`;
+}
+
+function render() {
+  document.getElementById("root").innerHTML = `
+  <header>
+    <svg width="38" height="38" viewBox="-10 -10 120 120" aria-hidden="true"><ellipse cx="50" cy="50" rx="58" ry="17" fill="none" stroke="#22D3EE" stroke-width="3" opacity="0.7" transform="rotate(-22 50 50)"/><path d="M14 10 H50 C96 10 96 90 50 90 H14 Z" fill="none" stroke="#22D3EE" stroke-width="10"/><g fill="#22D3EE"><rect x="32" y="30" width="9" height="40"/><polygon points="44,30 64,40 44,50"/><polygon points="45,53 53,53 64,70 56,70"/></g></svg>
+    <b>RYONIC STUDIO</b><span class="pill">DEV</span>
+  </header>
+  <p class="status">Editing: ${esc(source)} ${dirty ? `<span class="dirty">· unsaved changes, download when done</span>` : ""}</p>
+
+  <h2>Sneak peeks &amp; news</h2>
+  <p class="sub">The top one shows first in the app. New posts show a NEW tag and give players +20 RP when they read them.</p>
+  <button class="btn" data-a="pAdd">+ New post</button>
+  ${C.peeks.map(peekCard).join("")}
+
+  <h2>Upcoming releases</h2>
+  <p class="sub">Set a date to start the countdown on the app's home screen. The soonest date shows first.</p>
+  <button class="btn" data-a="uAdd">+ New release</button>
+  ${C.upcoming.map(upCard).join("")}
+
+  <h2>Game links</h2>
+  <p class="sub">The Browser and App Store buttons in the app. Leave App Store empty until the game is live: the app shows "App Store soon".</p>
+  ${Object.keys(GAME_NAMES).map(id => `<div class="card">
+    <span class="eyebrow" style="color:var(--cyan)">${GAME_NAMES[id]}</span>
+    <label>Browser link<input data-f="games.${id}.web" value="${esc(C.games[id].web)}"></label>
+    <label>App Store link<input data-f="games.${id}.appStore" placeholder="https://apps.apple.com/app/id..." value="${esc(C.games[id].appStore)}"></label>
+  </div>`).join("")}
+
+  <h2>WhatsApp channel</h2>
+  <div class="card"><label>Channel link (leave empty to hide the button)<input data-f="channelUrl" placeholder="https://whatsapp.com/channel/..." value="${esc(C.channelUrl)}"></label></div>
+
+  <h2>Publish</h2>
+  <div class="card">
+    <ol class="steps">
+      <li>Tap <b>Download content.json</b> at the bottom.</li>
+      <li>Open your <b>Ryonic</b> repo on github.com and tap <b>Add file → Upload files</b>.</li>
+      <li>Drop in <b>content.json</b> (it replaces the old one) and tap <b>Commit changes</b>.</li>
+      <li>Wait about a minute, then open the Ryonic app. Your post is live.</li>
+    </ol>
+  </div>
+
+  <h2>Test tools</h2>
+  <p class="sub">These only change the Ryonic app on <b>this device</b>, for testing. Players are not affected.</p>
+  <div class="card row">
+    <button class="btn ghost" data-a="tRp">+500 RP</button>
+    <button class="btn ghost" data-a="tDaily">Reset daily reward</button>
+    <button class="btn ghost" data-a="tQuests">Reset quests &amp; peeks</button>
+    <button class="btn red" data-a="tDraft">Discard draft</button>
+  </div>`;
+}
+
+/* ---------- editing ---------- */
+document.addEventListener("input", (e) => {
+  const f = e.target.dataset.f; if (!f) return;
+  const parts = f.split(".");
+  let o = C; for (let k = 0; k < parts.length - 1; k++) o = o[parts[k]];
+  const key = parts[parts.length - 1];
+  o[key] = key === "date" ? (e.target.value || null) : e.target.value;
+  touch();
+  if (e.target.tagName === "SELECT") render();
+  else { const s = document.querySelector(".status"); if (s && !s.querySelector(".dirty")) s.insertAdjacentHTML("beforeend", ` <span class="dirty">· unsaved changes, download when done</span>`); }
+});
+
+document.addEventListener("click", (e) => {
+  const el = e.target.closest("[data-a]"); if (!el) return;
+  const a = el.dataset.a, i = +el.dataset.i;
+  if (a === "pAdd") { C.peeks.unshift({ id: newId("peek"), tag: "SNEAK PEEK", title: "", body: "", image: "" }); touch(); render(); setTimeout(() => { const t = document.querySelector('[data-f="peeks.0.title"]'); if (t) t.focus(); }, 50); }
+  if (a === "pUp" && i > 0) { [C.peeks[i - 1], C.peeks[i]] = [C.peeks[i], C.peeks[i - 1]]; touch(); render(); }
+  if (a === "pDown" && i < C.peeks.length - 1) { [C.peeks[i + 1], C.peeks[i]] = [C.peeks[i], C.peeks[i + 1]]; touch(); render(); }
+  if (a === "pDel" && confirm("Delete this post?")) { C.peeks.splice(i, 1); touch(); render(); }
+  if (a === "pImg") { imgTarget = i; document.getElementById("imgIn").click(); }
+  if (a === "pImgDel") { C.peeks[i].image = ""; touch(); render(); }
+  if (a === "uAdd") { C.upcoming.push({ id: newId("release"), kind: "NEW GAME", title: "", date: null, color: "#22D3EE" }); touch(); render(); }
+  if (a === "uDel" && confirm("Delete this release?")) { C.upcoming.splice(i, 1); touch(); render(); }
+  if (a === "uColor") { C.upcoming[i].color = el.dataset.c; touch(); render(); }
+  if (a === "openFile") document.getElementById("fileIn").click();
+  if (a === "download") download();
+  if (a.startsWith("t")) testTool(a);
+});
+
+/* pictures are shrunk and stored inside content.json, so you only upload one file */
+document.getElementById("imgIn").addEventListener("change", (e) => {
+  const file = e.target.files[0]; e.target.value = "";
+  if (!file || imgTarget == null) return;
+  const img = new Image();
+  img.onload = () => {
+    const max = 900, scale = Math.min(1, max / Math.max(img.width, img.height));
+    const cv = document.createElement("canvas");
+    cv.width = Math.round(img.width * scale); cv.height = Math.round(img.height * scale);
+    cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+    C.peeks[imgTarget].image = cv.toDataURL("image/jpeg", 0.78);
+    URL.revokeObjectURL(img.src); touch(); render(); toast("Picture added");
+  };
+  img.onerror = () => toast("Couldn't read that picture");
+  img.src = URL.createObjectURL(file);
+});
+
+document.getElementById("fileIn").addEventListener("change", async (e) => {
+  const file = e.target.files[0]; e.target.value = "";
+  if (!file) return;
+  try { C = normalize(JSON.parse(await file.text())); source = file.name; touch(); dirty = false; render(); toast("Opened " + file.name); }
+  catch (err) { toast("That file isn't a valid content.json"); }
+});
+
+function download() {
+  const empty = C.peeks.find(p => !p.title.trim()) || C.upcoming.find(u => !u.title.trim());
+  if (empty) { toast("A post or release has no title yet"); return; }
+  const blob = new Blob([JSON.stringify(C, null, 2)], { type: "application/json" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "content.json";
+  document.body.appendChild(a); a.click(); a.remove();
+  dirty = false; render(); toast("Downloaded. Now upload it to GitHub");
+}
+
+function testTool(a) {
+  let S; try { S = JSON.parse(localStorage.getItem("ryonic:v1") || "null"); } catch (e) {}
+  if (a === "tDraft") { if (confirm("Throw away your unsaved draft?")) { localStorage.removeItem(DRAFT_KEY); location.reload(); } return; }
+  if (!S) { toast("Open the Ryonic app on this device first"); return; }
+  if (a === "tRp") { S.rp += 500; S.xp += 500; toast("+500 RP added"); }
+  if (a === "tDaily") { S.lastClaim = ""; toast("Daily reward can be claimed again"); }
+  if (a === "tQuests") { S.claimed = []; S.seen = []; toast("Quests and peeks reset"); }
+  localStorage.setItem("ryonic:v1", JSON.stringify(S));
+}
+
+/* ---------- start: draft, then the live content.json, then defaults ---------- */
+(async function start() {
+  let draft = null; try { draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null"); } catch (e) {}
+  if (draft) { C = normalize(draft); source = "your saved draft"; dirty = true; render(); return; }
+  try {
+    const r = await fetch("content.json?t=" + Date.now(), { cache: "no-store" });
+    if (r.ok) { C = normalize(await r.json()); source = "live content.json"; }
+  } catch (e) {}
+  render();
+})();
+window.addEventListener("beforeunload", (e) => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
+</script>
+</body>
+</html>
