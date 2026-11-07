@@ -1,0 +1,15 @@
+{
+  "appId": "com.ryan.ryonic",
+  "appName": "Ryonic",
+  "webDir": "www",
+  "backgroundColor": "#0B0C0F",
+  "server": {
+    "url": "https://ryansacr7-dot.github.io/Ryonic/",
+    "allowNavigation": ["ryansacr7-dot.github.io"]
+  },
+  "ios": {
+    "contentInset": "never",
+    "scrollEnabled": true,
+    "backgroundColor": "#0B0C0F"
+  }
+}
