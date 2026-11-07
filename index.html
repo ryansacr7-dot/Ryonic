@@ -698,7 +698,7 @@ async function loadContent() {
     if (c.games && typeof c.games === "object") {
       for (const id in CONFIG.games) {
         const l = c.games[id]; if (!l) continue;
-        if (typeof l.web === "string" && l.web.trim()) CONFIG.games[id].web = l.web.trim();
+        if (typeof l.web === "string" && l.web.trim()) CONFIG.games[id].web = l.web.trim().replace(/\/box-smash\//i, "/Box-Smash/").replace(/\/signal-run\//i, "/Signal-Run/");
         if (typeof l.appStore === "string") CONFIG.games[id].appStore = l.appStore.trim();
       }
     }
