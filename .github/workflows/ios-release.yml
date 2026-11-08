@@ -1,12 +1,13 @@
 name: Build Ryonic for TestFlight
 
 # Builds when you press "Run workflow" in the Actions tab, or when the build files change.
-# Updating content.json or index.html does NOT need a new build: the app loads them live.
+# Changing index.html rebuilds the app. Updating content.json (posts, dates, links) does NOT need a build: the app loads it live.
 on:
   workflow_dispatch:
   push:
     branches: [main, master]
     paths:
+      - 'index.html'
       - 'capacitor.config.json'
       - 'icon.png'
       - '.github/workflows/ios-release.yml'
@@ -30,17 +31,17 @@ jobs:
           set -e
           rm -rf www
           mkdir -p www
-          # The app opens the live site (ryansacr7-dot.github.io/Ryonic/, set in capacitor.config.json),
-          # so it can open Signal Run and Box Smash and read their saves.
-          # This copy is only a fallback that Capacitor needs to build.
+          # The whole app is built in (works offline). Only content.json is loaded live from
+          # ryansacr7-dot.github.io/Ryonic/content.json; this copy is the offline fallback.
           cp index.html www/
+          [ -f content.json ] && cp content.json www/ || true
           ls -la www
 
       - name: Install Mobile Environment Wrapper
         run: |
           set -e
           npm init -y
-          npm install @capacitor/core@5 @capacitor/cli@5 @capacitor/ios@5 @capacitor/app@5
+          npm install @capacitor/core@5 @capacitor/cli@5 @capacitor/ios@5 @capacitor/app@5 @capacitor/local-notifications@5
           if [ ! -f capacitor.config.json ] && [ ! -f capacitor.config.ts ]; then
             npx cap init "Ryonic" "com.ryan.ryonic" --web-dir=www
           fi
