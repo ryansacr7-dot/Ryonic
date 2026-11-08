@@ -136,6 +136,15 @@ const CONFIG = {
   ]
 };
 
+/* ---------- iPhone app helpers ---------- */
+const PAGES = "https://ryansacr7-dot.github.io/Ryonic/";
+const GAMES_ORIGIN = "https://ryansacr7-dot.github.io";
+function isNative() { try { return !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform()); } catch (e) { return false; } }
+function plugin(name) {
+  try { const C = window.Capacitor; if (!C) return null; return (C.Plugins && C.Plugins[name]) || (C.registerPlugin ? C.registerPlugin(name) : null); }
+  catch (e) { return null; }
+}
+
 /* ---------- read the real game saves ---------- */
 function readJSON(key) { try { const v = JSON.parse(localStorage.getItem(key) || "null"); return v && typeof v === "object" ? v : null; } catch (e) { return null; } }
 function signalSave() {
@@ -257,12 +266,12 @@ const NAV_ICON = {
 /* ---------- Ryonic state ---------- */
 const KEY = "ryonic:v1";
 const fresh = () => ({ nick: "", rp: 0, xp: 0, streak: 0, bestStreak: 0, lastClaim: "", owned: ["f-cyan", "n-white"],
-  frame: "f-cyan", nameColor: "n-white", badge: "b-rookie", prereg: {}, preregPaid: {}, seen: [], claimed: [], badgesSeen: ["b-rookie"] });
+  frame: "f-cyan", nameColor: "n-white", badge: "b-rookie", prereg: {}, preregPaid: {}, seen: [], claimed: [], badgesSeen: ["b-rookie"], notify: true });
 let S;
 try { S = Object.assign(fresh(), JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (e) { S = fresh(); }
 ["claimed", "seen", "owned", "badgesSeen"].forEach(k => { if (!Array.isArray(S[k])) S[k] = fresh()[k]; });
 ["prereg", "preregPaid"].forEach(k => { if (!S[k] || typeof S[k] !== "object") S[k] = {}; });
-const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} scheduleNotifications(); };
 
 let tab = "home", lockerTab = "frames", lockerSel = null, openPeek = null, questGame = "signal", sheet = false;
 
@@ -495,7 +504,7 @@ function locker() {
 
 function upcoming() {
   return `<h1>Upcoming</h1>
-  <p class="sub">Pre-register for free and get +100 RP. Once a date is set, add it to your calendar so you get a reminder on launch day.</p>
+  <p class="sub">Pre-register for free and get +100 RP. ${isNative() ? "You\u2019ll get a notification the day before and on launch day." : "Once a date is set, add it to your calendar so you get a reminder on launch day."}</p>
   ${CONFIG.upcoming.map(u => {
     const d = parseDate(u.date), on = !!S.prereg[u.id];
     return `<div class="card">
@@ -508,7 +517,7 @@ function upcoming() {
         </div>
       </div>
       <button class="btn ${on ? "ghost" : ""}" data-a="prereg" data-id="${u.id}">${on ? "Pre-registered" : "Pre-register free"}</button>
-      ${on && d ? `<button class="btn ghost" data-a="ics" data-id="${u.id}">Add to calendar</button>` : ""}
+      ${on && d ? (isNative() ? `<div class="muted" style="font-size:13px">${S.notify ? "Notification set for launch day" : "Turn on notifications in your profile to get a launch-day alert"}</div>` : `<button class="btn ghost" data-a="ics" data-id="${u.id}">Add to calendar</button>`) : ""}
     </div>`;
   }).join("")}`;
 }
@@ -518,6 +527,8 @@ function profileSheet() {
     <div class="row">${avatar(64)}<div class="grow"><div class="big" style="color:${nameColor()}">${esc(S.nick)}</div><div class="muted" style="font-size:14px">Level ${level(S.xp).lvl} · ${fmtNum(S.xp)} XP · best streak ${S.bestStreak}</div></div></div>
     <div class="field"><label for="nick2">Nickname</label><input id="nick2" maxlength="16" value="${esc(S.nick)}"></div>
     <button class="btn" data-a="saveNick">Save nickname</button>
+    ${isNative() ? `<button class="btn ${S.notify ? "ghost" : "dim"}" data-a="notify" style="cursor:pointer">Notifications: ${S.notify ? "On" : "Off"}</button>
+    <p class="note">Daily reward reminders, and alerts for releases you pre-registered for.</p>` : ""}
     <p class="note">Your Ryonic progress is saved on this device only. Resetting here never touches your game saves.</p>
     <button class="btn ghost" data-a="reset" style="border-color:#F43F5E;color:#F43F5E">Reset Ryonic progress</button>
     <button class="btn dim" data-a="closeSheet" style="color:var(--text);cursor:pointer">Close</button>
@@ -568,7 +579,7 @@ function openGame(id) {
   try { sameSite = new URL(g.web).host === location.host; } catch (e) {}
   // Only play inside the app when it's hosted next to the games (that's what lets it read the saves).
   // Anywhere else (a preview, a different site) open the game in a new tab so it never 404s.
-  if (!sameSite) { window.open(g.web, "_blank", "noopener"); return; }
+  if (!sameSite && !isNative()) { window.open(g.web, "_blank", "noopener"); return; }
   const p = document.getElementById("player");
   const f = document.createElement("iframe");
   f.src = g.web; f.title = g.name; f.allow = "autoplay; fullscreen; gamepad";
@@ -581,7 +592,8 @@ function closeGame() {
   p.classList.remove("on"); document.body.style.overflow = "";
   if (!f) return;
   try { f.contentWindow.dispatchEvent(new Event("pagehide")); f.contentWindow.dispatchEvent(new Event("beforeunload")); } catch (e) {}
-  setTimeout(() => { f.remove(); afterGame(); }, 150);
+  try { f.contentWindow.postMessage({ ryonicFlush: true }, GAMES_ORIGIN); } catch (e) {}   // ask the game for its latest stats
+  setTimeout(() => { f.remove(); afterGame(); }, 400);
 }
 function afterGame() {
   const before = readyCount();
@@ -627,7 +639,7 @@ document.addEventListener("click", (e) => {
     S.bestStreak = Math.max(S.bestStreak, S.streak);
     S.lastClaim = today();
     give(50 + 10 * Math.min(S.streak - 1, 6), `Day ${S.streak} streak`);
-    render();
+    render(); askNotifyPermission();
   }
   if (a === "claimQuest") {
     refreshGames();
@@ -640,6 +652,7 @@ document.addEventListener("click", (e) => {
     else {
       S.prereg[id] = true;
       if (!S.preregPaid[id]) { S.preregPaid[id] = true; give(100, "Pre-registered!"); } else { save(); toast("Pre-registered"); }
+      askNotifyPermission();
     }
     render();
   }
@@ -669,6 +682,7 @@ document.addEventListener("click", (e) => {
     save(); render();
   }
   if (a === "profile") { sheet = true; render(); }
+  if (a === "notify") { S.notify = !S.notify; save(); if (S.notify) askNotifyPermission(); toast(S.notify ? "Notifications on" : "Notifications off"); render(); }
   if (a === "closeSheet") { sheet = false; render(); }
   if (a === "saveNick") {
     const v = document.getElementById("nick2").value.trim();
@@ -683,15 +697,12 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && e.target.id === "nick") document.querySelector('[data-a="start"]').click();
 });
 document.addEventListener("visibilitychange", () => {
-  if (!document.hidden && S.nick && !document.getElementById("player").classList.contains("on")) { refreshGames(); render(); checkBadges(); }
+  if (!document.hidden && S.nick && !document.getElementById("player").classList.contains("on")) { refreshGames(); render(); checkBadges(); scheduleNotifications(); }
 });
 
 /* ---------- load live content (made with Ryonic Studio) ---------- */
-async function loadContent() {
-  try {
-    const r = await fetch("content.json?t=" + Date.now(), { cache: "no-store" });
-    if (!r.ok) return;
-    const c = await r.json();
+function applyContent(c) {
+    if (!c || typeof c !== "object") return;
     if (typeof c.channelUrl === "string") CONFIG.channelUrl = c.channelUrl;
     if (Array.isArray(c.upcoming)) CONFIG.upcoming = c.upcoming.filter(u => u && u.id && u.title);
     if (Array.isArray(c.peeks)) CONFIG.peeks = c.peeks.filter(p => p && p.id && p.title);
@@ -702,8 +713,22 @@ async function loadContent() {
         if (typeof l.appStore === "string") CONFIG.games[id].appStore = l.appStore.trim();
       }
     }
-    render();
-  } catch (e) {}
+}
+async function loadContent() {
+  const cached = readJSON("ryonic:content");                      // last copy we saw: works offline
+  if (cached) { applyContent(cached); render(); }
+  const urls = isNative() ? [PAGES + "content.json", "content.json"] : ["content.json"];   // live from GitHub, then the copy built into the app
+  for (const u of urls) {
+    if (cached && isNative() && u.indexOf("http") !== 0) break;   // offline: keep the newer cached copy over the built-in one
+    try {
+      const r = await fetch(u + "?t=" + Date.now(), { cache: "no-store" });
+      if (!r.ok) continue;
+      const c = await r.json();
+      applyContent(c); render(); scheduleNotifications();
+      if (u.indexOf("http") === 0 || !isNative()) { try { localStorage.setItem("ryonic:content", JSON.stringify(c)); } catch (e) {} }
+      return;
+    } catch (e) {}
+  }
 }
 
 /* ---------- receive "Sync to Ryonic" from the game apps ---------- */
@@ -714,13 +739,13 @@ function ago(t) {
   const h = Math.round(m / 60); if (h < 24) return h + "h ago";
   return Math.round(h / 24) + "d ago";
 }
-function handleSyncUrl(url) {
+function handleSyncUrl(url, silent) {
   if (!url || url.indexOf("sync") === -1) return;
   const d = (url.match(/[?&#]d=([^&]+)/) || [])[1], c = (url.match(/[?&]c=([^&#]+)/) || [])[1];
   if (!d || !c) return;
   const s = "ryonic|" + d; let h = 2166136261;
   for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
-  if (h.toString(16) !== c) { toast("That sync link didn't look right"); return; }
+  if (h.toString(16) !== c) { if (!silent) toast("That sync link didn't look right"); return; }
   let p;
   try { p = JSON.parse(decodeURIComponent(escape(atob(d.replace(/-/g, "+").replace(/_/g, "/"))))); } catch (e) { return; }
   if (!p || !CONFIG.games[p.g] || typeof p.t !== "number") return;
@@ -731,21 +756,65 @@ function handleSyncUrl(url) {
   try { localStorage.setItem(SYNC_KEY, JSON.stringify(all)); } catch (e) {}
   const before = readyCount();
   refreshGames();
-  if (S.nick) { tab = "games"; questGame = p.g; render(); window.scrollTo(0, 0); }
   const n = readyCount() - before;
+  if (silent) { if (n > 0) toast(`${n} quest${n > 1 ? "s" : ""} ready to claim!`); return; }
+  if (S.nick) { tab = "games"; questGame = p.g; render(); window.scrollTo(0, 0); }
   toast(`${CONFIG.games[p.g].name} progress synced!${n > 0 ? ` ${n} quest${n > 1 ? "s" : ""} ready` : ""}`);
   setTimeout(checkBadges, 1600);
   try { if (location.hash.indexOf("sync") !== -1) history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
 }
 (function listenForSync() {
-  const App = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App;
+  const App = isNative() ? plugin("App") : null;
   if (App) {
     try { App.addListener("appUrlOpen", (e) => handleSyncUrl(e && e.url)); } catch (e) {}
     try { App.getLaunchUrl().then((r) => { if (r && r.url) handleSyncUrl(r.url); }).catch(() => {}); } catch (e) {}
   }
   if (location.hash.indexOf("sync") !== -1) setTimeout(() => handleSyncUrl(location.hash), 300);   // for testing in a browser
   window.addEventListener("hashchange", () => { if (location.hash.indexOf("sync") !== -1) handleSyncUrl(location.hash); });
+  // games playing inside Ryonic send their stats every few seconds
+  window.addEventListener("message", (e) => {
+    if (e.origin !== GAMES_ORIGIN || !e.data || typeof e.data.ryonicSync !== "string") return;
+    handleSyncUrl(e.data.ryonicSync, true);
+  });
 })();
+
+/* ---------- notifications (iPhone app only) ---------- */
+var notifTimer = null;
+function scheduleNotifications() { clearTimeout(notifTimer); notifTimer = setTimeout(doScheduleNotifications, 800); }
+async function doScheduleNotifications() {
+  if (!isNative()) return;
+  const LN = plugin("LocalNotifications"); if (!LN) return;
+  try {
+    const pending = await LN.getPending();
+    if (pending && pending.notifications && pending.notifications.length) await LN.cancel({ notifications: pending.notifications.map(n => ({ id: n.id })) });
+    if (!S.notify || !S.nick) return;
+    const perm = await LN.checkPermissions();
+    if (!perm || perm.display !== "granted") return;
+    const list = [], now = new Date();
+    // daily reward: 10:00 tomorrow if claimed today, otherwise 18:00 today
+    const at = new Date();
+    if (S.lastClaim === today()) { at.setDate(at.getDate() + 1); at.setHours(10, 0, 0, 0); }
+    else { at.setHours(18, 0, 0, 0); if (at <= now) { at.setDate(at.getDate() + 1); at.setHours(10, 0, 0, 0); } }
+    const streak = (S.lastClaim === today() || S.lastClaim === yesterday()) ? S.streak : 0;
+    list.push({ id: 1, title: "Daily reward ready", body: streak >= 2 ? `Claim it to keep your ${streak}-day streak going!` : "Your free RP is waiting in Ryonic.", schedule: { at } });
+    // releases you pre-registered for: the evening before, and launch morning
+    CONFIG.upcoming.forEach((u, i) => {
+      if (!S.prereg[u.id] || !u.date) return;
+      const launch = parseDate(u.date); if (!launch || isNaN(launch)) return;
+      if (u.date.length <= 10) launch.setHours(10, 0, 0, 0);
+      const eve = new Date(launch); eve.setDate(eve.getDate() - 1); eve.setHours(18, 0, 0, 0);
+      if (eve > now) list.push({ id: 100 + i * 2, title: `${u.title} drops tomorrow`, body: "You pre-registered. Get ready!", schedule: { at: eve } });
+      if (launch > now) list.push({ id: 101 + i * 2, title: `${u.title} is out now!`, body: "Open Ryonic to jump in.", schedule: { at: launch } });
+    });
+    await LN.schedule({ notifications: list });
+  } catch (e) {}
+}
+async function askNotifyPermission() {
+  if (!isNative() || !S.notify) return;
+  const LN = plugin("LocalNotifications"); if (!LN) return;
+  try { const p = await LN.checkPermissions(); if (p && p.display && p.display.indexOf("prompt") === 0) await LN.requestPermissions(); } catch (e) {}
+  scheduleNotifications();
+}
 
 render();
 loadContent();
