@@ -60,10 +60,11 @@ const TAGS = ["SNEAK PEEK", "NEWS", "UPDATE", "EVENT"];
 const TAG_COLOR = { "NEWS": "#22D3EE", "SNEAK PEEK": "#FACC15", "UPDATE": "#A3E635", "EVENT": "#FF5FA2" };
 const KINDS = ["STORE LAUNCH", "UPDATE", "NEW GAME", "NEW APP", "EVENT"];
 const COLORS = ["#22D3EE", "#FACC15", "#FB923C", "#A78BFA", "#A3E635", "#FF5FA2"];
-const GAME_NAMES = { signal: "Signal Run", box: "Box Smash" };
+const GAME_NAMES = { signal: "Signal Run", box: "Box Smash", zombies: "Zombies Survive" };
 const DEFAULT_GAMES = {
   signal: { web: "https://ryansacr7-dot.github.io/Signal-Run/", appStore: "" },
-  box: { web: "https://ryansacr7-dot.github.io/Box-Smash/", appStore: "" }
+  box: { web: "https://ryansacr7-dot.github.io/Box-Smash/", appStore: "" },
+  zombies: { web: "https://ryansacr7-dot.github.io/Zombies-Survive-/", appStore: "" }
 };
 const DEFAULT = {
   channelUrl: "",
@@ -153,10 +154,10 @@ function render() {
   ${C.upcoming.map(upCard).join("")}
 
   <h2>Game links</h2>
-  <p class="sub">The Browser and App Store buttons in the app. Leave App Store empty until the game is live: the app shows "App Store soon".</p>
+  <p class="sub">The App Store button on each game. Leave it empty until the game is live: the app shows "App Store · coming soon". The web link is only used when someone opens Ryonic in a browser.</p>
   ${Object.keys(GAME_NAMES).map(id => `<div class="card">
     <span class="eyebrow" style="color:var(--cyan)">${GAME_NAMES[id]}</span>
-    <label>Browser link<input data-f="games.${id}.web" value="${esc(C.games[id].web)}"></label>
+    <label>Web link (browser version)<input data-f="games.${id}.web" value="${esc(C.games[id].web)}"></label>
     <label>App Store link<input data-f="games.${id}.appStore" placeholder="https://apps.apple.com/app/id..." value="${esc(C.games[id].appStore)}"></label>
   </div>`).join("")}
 
